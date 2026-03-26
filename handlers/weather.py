@@ -50,9 +50,11 @@ async def process_city(message: Message, state: FSMContext):
         data = response.json()
 
     if data.get("cod") != 200:
+        error_msg = data.get("message", "Неизвестная ошибка")
         await message.answer(
-            f"❌ Город «{city}» не найден. Попробуй ещё раз.",
-            reply_markup=back_keyboard()
+            f"❌ Ошибка: {error_msg}\n"
+            f"Код ошибки: {data.get('cod')}\n"
+            f"Город: {city}"
         )
         return
 
