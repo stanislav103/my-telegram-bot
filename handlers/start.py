@@ -10,6 +10,7 @@ def main_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🌤 Погода", callback_data="weather")],
         [InlineKeyboardButton(text="💰 Курс валют", callback_data="currency")],
+        [InlineKeyboardButton(text="⛽ Топливо", callback_data="fuel")],
         [InlineKeyboardButton(text="ℹ️ О боте", callback_data="about")],
     ])
 
