@@ -4,6 +4,13 @@ import httpx
 
 router = Router()
 
+
+def back_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+    ])
+
+
 @router.callback_query(F.data == "currency")
 async def callback_currency(call: CallbackQuery):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -26,7 +33,8 @@ async def callback_nbu(call: CallbackQuery):
         f"🏦 Офіційний курс НБУ:\n"
         f"💵 USD: {usd['rate']} грн\n"
         f"💶 EUR: {eur['rate']} грн\n"
-        f"📅 {usd['exchangedate']}"
+        f"📅 {usd['exchangedate']}",
+        reply_markup=back_keyboard()
     )
     await call.answer()
 
@@ -42,11 +50,16 @@ async def callback_mono(call: CallbackQuery):
     await call.message.answer(
         f"💱 Ринковий курс (Monobank):\n"
         f"💵 USD: купівля {usd['rateBuy']} / продаж {usd['rateSell']} грн\n"
-        f"💶 EUR: купівля {eur['rateBuy']} / продаж {eur['rateSell']} грн"
+        f"💶 EUR: купівля {eur['rateBuy']} / продаж {eur['rateSell']} грн",
+        reply_markup=back_keyboard()
     )
     await call.answer()
 
 @router.callback_query(F.data == "about")
 async def callback_about(call: CallbackQuery):
-    await call.message.answer("ℹ️ Я учебный бот на aiogram 3")
+    await call.message.answer(
+        "ℹ️ Я учебный бот на aiogram 3\n"
+        "Умею: погода, курс валют, цены на топливо",
+        reply_markup=back_keyboard()
+    )
     await call.answer()

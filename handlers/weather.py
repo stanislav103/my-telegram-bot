@@ -1,14 +1,21 @@
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 import httpx
 
 from config import WEATHER_API_KEY
 from states import WeatherForm
-from database import add_weather_request, get_user_history, get_user_stats  # ← добавить
+from database import add_weather_request, get_user_history, get_user_stats
 
 router = Router()
+
+
+def back_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+    ])
+
 
 @router.callback_query(F.data == "weather")
 async def callback_weather(call: CallbackQuery, state: FSMContext):
@@ -43,10 +50,13 @@ async def process_city(message: Message, state: FSMContext):
         data = response.json()
 
     if data.get("cod") != 200:
-        await message.answer(f"❌ Город «{city}» не найден. Попробуй ещё раз: нажми кнопку Погода")
+        await message.answer(
+            f"❌ Город «{city}» не найден. Попробуй ещё раз.",
+            reply_markup=back_keyboard()
+        )
         return
 
-    await add_weather_request(message.from_user.id, city)  # ← сохраняем запрос
+    await add_weather_request(message.from_user.id, city)
 
     temp = data["main"]["temp"]
     feels = data["main"]["feels_like"]
@@ -60,19 +70,26 @@ async def process_city(message: Message, state: FSMContext):
         f"🤔 Ощущается как: {feels:.0f}°C\n"
         f"☁️ {desc.capitalize()}\n"
         f"💧 Влажность: {humidity}%\n"
-        f"💨 Ветер: {wind} м/с"
+        f"💨 Ветер: {wind} м/с",
+        reply_markup=back_keyboard()
     )
 
 @router.message(Command("history"))
 async def cmd_history(message: Message):
     rows = await get_user_history(message.from_user.id)
     if not rows:
-        await message.answer("Ты ещё не запрашивал погоду.")
+        await message.answer("Ты ещё не запрашивал погоду.", reply_markup=back_keyboard())
         return
     lines = [f"{i+1}. {city} — {at[:10]}" for i, (city, at) in enumerate(rows)]
-    await message.answer("🕒 Последние запросы:\n" + "\n".join(lines))
+    await message.answer(
+        "🕒 Последние запросы:\n" + "\n".join(lines),
+        reply_markup=back_keyboard()
+    )
 
 @router.message(Command("stats"))
 async def cmd_stats(message: Message):
     count = await get_user_stats(message.from_user.id)
-    await message.answer(f"📊 Ты запросил погоду {count} раз(а).")
+    await message.answer(
+        f"📊 Ты запросил погоду {count} раз(а).",
+        reply_markup=back_keyboard()
+    )

@@ -1,6 +1,8 @@
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram import F
+from aiogram.types import CallbackQuery
 
 from database import add_user  # ← добавить
 
@@ -33,3 +35,8 @@ async def cmd_help(message: Message):
 @router.message(Command("menu"))
 async def cmd_menu(message: Message):
     await message.answer("Выбери раздел:", reply_markup=main_keyboard())
+
+@router.callback_query(F.data == "main_menu")
+async def callback_main_menu(call: CallbackQuery):
+    await call.message.answer("Выбери раздел:", reply_markup=main_keyboard())
+    await call.answer()
