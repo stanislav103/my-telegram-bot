@@ -4,7 +4,8 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
 from handlers import start, weather, currency, fuel
-from database import init_db  
+from database import init_db
+from handlers import works  
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -13,6 +14,7 @@ dp.include_router(start.router)
 dp.include_router(weather.router)
 dp.include_router(currency.router)
 dp.include_router(fuel.router)
+dp.include_router(works.router)
 
 async def main():
     await init_db()  # ← создаёт таблицы при запуске
