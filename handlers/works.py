@@ -54,6 +54,10 @@ async def fetch_categories() -> dict[str, str]:
         resp.raise_for_status()
 
     soup = BeautifulSoup(resp.text, "lxml")
+
+    logger.info(f"HTML отримано: {len(resp.text)} символів")
+    logger.info(f"Знайдено посилань всього: {len(soup.select('ul li a[href]'))}")
+
     categories: dict[str, str] = {}
 
     for a in soup.select("ul li a[href]"):
@@ -69,6 +73,10 @@ async def fetch_categories() -> dict[str, str]:
                                              "/rules", "/agreement", "/about"])
         ):
             categories[name] = href
+
+    logger.info(f"Категорій після фільтру: {len(categories)}")
+    if categories:
+        logger.info(f"Приклад: {list(categories.items())[:3]}")
 
     _categories_cache = categories
     _categories_ts = time.time()
