@@ -1,8 +1,8 @@
 import asyncio
-from random import sample
 import time
 import json
 import logging
+import re
 import httpx
 from bs4 import BeautifulSoup
 from aiogram import Router, F
@@ -55,14 +55,7 @@ async def fetch_categories() -> dict[str, str]:
         resp.raise_for_status()
 
     soup = BeautifulSoup(resp.text, "lxml")
-
-    logger.info(f"HTML отримано: {len(resp.text)} символів")
-    logger.info(f"Знайдено посилань всього: {len(soup.select('ul li a[href]'))}")
-
     categories: dict[str, str] = {}
-
-    sample = [a["href"] for a in soup.select("ul li a[href]")[:10]]
-    logger.info(f"Приклад href: {sample}")
 
     for a in soup.select("ul li a[href]"):
         href = a["href"]
@@ -76,10 +69,6 @@ async def fetch_categories() -> dict[str, str]:
                                              "/rules", "/agreement", "/about"])
         ):
             categories[name] = BASE_URL + href
-
-    logger.info(f"Категорій після фільтру: {len(categories)}")
-    if categories:
-        logger.info(f"Приклад: {list(categories.items())[:3]}")
 
     _categories_cache = categories
     _categories_ts = time.time()
@@ -104,13 +93,15 @@ async def fetch_category_prices(url: str) -> list[dict]:
 
         text = li.get_text(" ", strip=True)
 
-        # Діапазон цін: "500 - 1200 грн/м²"
-        import re
         range_match = re.search(r"Діапазон цін:\s*([\d\s\-]+(?:грн[^\n]*)?)", text)
         avg_match = re.search(r"Середня ціна\s+([\d]+)\s+(грн[^\s]*)", text)
 
         price_range = range_match.group(1).strip() if range_match else "—"
         avg_price = f"{avg_match.group(1)} {avg_match.group(2)}" if avg_match else "—"
+
+        # ── Пропускаємо позиції без цін ──────────────────
+        if price_range == "—" and avg_price == "—":
+            continue
 
         works.append({
             "name": name,
@@ -151,27 +142,26 @@ async def ask_claude_categories(query: str, categories: dict[str, str]) -> list[
     data = resp.json()
     raw = data["content"][0]["text"].strip()
 
-    # Clean up possible markdown fences
     raw = raw.strip("`").strip()
     if raw.lower().startswith("json"):
         raw = raw[4:].strip()
 
     chosen: list[str] = json.loads(raw)
-    # Валідуємо — повертаємо тільки ті, що реально є в словнику
     return [c for c in chosen if c in categories]
 
 
 # ── Форматування відповіді ────────────────────────────────────────────────────
-def format_prices(category: str, works: list[dict]) -> str:
+def format_prices(category: str, url: str, works: list[dict]) -> str:
     if not works:
         return f"<b>{category}</b>\nЦіни не знайдено.\n"
 
     lines = [f"<b>📋 {category}</b>"]
-    for w in works[:15]:  # не більше 15 позицій
+    for w in works[:8]:  # не більше 8 позицій
         lines.append(
             f"  • {w['name']}\n"
             f"    Діапазон: {w['range']} | Середня: <b>{w['avg']}</b>"
         )
+    lines.append(f'\n🔗 <a href="{url}">Детальніше на сайті</a>')
     return "\n".join(lines)
 
 
@@ -199,13 +189,11 @@ async def works_search(message: Message, state: FSMContext):
     status = await message.answer("⏳ Шукаю підходящі категорії робіт...")
 
     try:
-        # 1. Отримуємо всі категорії
         categories = await fetch_categories()
         if not categories:
             await status.edit_text("❌ Не вдалося завантажити список категорій. Спробуйте пізніше.")
             return
 
-        # 2. Claude підбирає потрібні
         await status.edit_text("🤖 Claude аналізує ваш запит...")
         chosen = await ask_claude_categories(query, categories)
 
@@ -216,12 +204,10 @@ async def works_search(message: Message, state: FSMContext):
             )
             return
 
-        # 3. Паралельно парсимо сторінки категорій
         await status.edit_text(f"📊 Збираю ціни по {len(chosen)} категорії(ях)...")
         tasks = [fetch_category_prices(categories[cat]) for cat in chosen]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # 4. Формуємо відповідь
         await status.delete()
         await message.answer(
             f"🔎 За запитом <b>«{query}»</b> знайдено:",
@@ -233,14 +219,12 @@ async def works_search(message: Message, state: FSMContext):
                 logger.error(f"Помилка парсингу {cat}: {result}")
                 await message.answer(f"⚠️ <b>{cat}</b>: не вдалося завантажити ціни.", parse_mode="HTML")
             else:
-                text = format_prices(cat, result)
+                # ── передаємо url категорії ───────────────
+                text = format_prices(cat, categories[cat], result)
                 if text:
-                    await message.answer(text, parse_mode="HTML")
+                    await message.answer(text, parse_mode="HTML", disable_web_page_preview=True)
 
-        await message.answer(
-            f"📌 Детальніше на rabotniki.ua/uk/price",
-            reply_markup=main_menu_kb(),
-        )
+        await message.answer("", reply_markup=main_menu_kb())
 
     except httpx.HTTPError as e:
         logger.error(f"HTTP помилка в works: {e}")
