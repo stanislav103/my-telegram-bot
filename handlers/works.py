@@ -67,16 +67,15 @@ async def fetch_categories() -> dict[str, str]:
     for a in soup.select("ul li a[href]"):
         href = a["href"]
         name = a.get_text(strip=True)
-        # беремо тільки внутрішні посилання на категорії (не фільтри, не сторінки)
         if (
-            href.startswith("https://www.rabotniki.ua/uk/")
+            href.startswith("/uk/")
             and name
             and not any(x in href for x in ["/price", "/signup", "/login", "/tender",
                                              "/catalog", "/tenders", "/calculator",
                                              "/rabota", "/resume", "/faq", "/reklama",
                                              "/rules", "/agreement", "/about"])
         ):
-            categories[name] = href
+            categories[name] = BASE_URL + href
 
     logger.info(f"Категорій після фільтру: {len(categories)}")
     if categories:
