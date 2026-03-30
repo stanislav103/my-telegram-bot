@@ -4,7 +4,7 @@ import time
 import json
 import logging
 import httpx
-from bs4 import BeautifulSoup, soup
+from bs4 import BeautifulSoup
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
