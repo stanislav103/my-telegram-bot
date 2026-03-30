@@ -1,9 +1,10 @@
 import asyncio
+from random import sample
 import time
 import json
 import logging
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, soup
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
@@ -59,6 +60,9 @@ async def fetch_categories() -> dict[str, str]:
     logger.info(f"Знайдено посилань всього: {len(soup.select('ul li a[href]'))}")
 
     categories: dict[str, str] = {}
+
+    sample = [a["href"] for a in soup.select("ul li a[href]")[:10]]
+    logger.info(f"Приклад href: {sample}")
 
     for a in soup.select("ul li a[href]"):
         href = a["href"]
