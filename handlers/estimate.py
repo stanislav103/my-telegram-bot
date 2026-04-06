@@ -11,7 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types import BufferedInputFile
 
-from states_estimate import EstimateStates, HistoryStates
+from states import EstimateStates, HistoryStates
 from estimate_config import SYSTEM_OPTIONS, THICKNESS_OPTIONS, PAINT_OPTIONS
 from estimate_calculator import calc_estimate
 from estimate_excel import generate_excel, get_filename
