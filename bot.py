@@ -19,8 +19,8 @@ dp.include_router(start.router)
 dp.include_router(weather.router)
 dp.include_router(currency.router)
 dp.include_router(fuel.router)
-dp.include_router(works.router)
 dp.include_router(estimate.router)
+dp.include_router(works.router)
 
 async def main():
     await init_db()  # ← создаёт таблицы при запуске
